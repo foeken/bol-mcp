@@ -1,0 +1,42 @@
+# bol-mcp
+
+MCP server that exposes bol.com's "Shophulp" AI shopping assistant as one tool, `ask_bol`. Sibling of [mediamarkt-mcp](https://github.com/foeken/mediamarkt-mcp).
+
+## How it works
+
+bol's Shophulp page POSTs an OpenAI-style streaming request to `https://www.bol.com/streaming/api/v1/chat/completions` (model `gemini-3.5-flash`, `stream: true`, `user` = a chat/thread UUID). No login or cookies are needed; a browser User-Agent and `Accept: text/event-stream` suffice. The SSE stream carries normal `chat.completion.chunk` deltas plus `t800.tool_outputs` chunks with grouped product recommendations (title, summary, products with price, seller, rating, image, url), a follow-up question and suggestion chips. This server flattens that into `text` + `structuredContent`.
+
+Unofficial endpoint: it can change or be blocked at any time (bol.com sits behind Akamai Bot Manager). See bol's [privacy policy](https://www.bol.com/nl/nl/tc/privacybeleid).
+
+## Install
+
+```sh
+npm install
+npm run check   # live smoke test against bol.com
+```
+
+## Run
+
+```sh
+node index.mjs                # http://localhost:3000 (Streamable HTTP, stateless)
+PORT=3001 node index.mjs
+BOL_UI=widget node index.mjs  # also serve the grouped product carousel (MCP Apps)
+node index.mjs --stdio        # stdio transport instead
+```
+
+| Variable | Values            | Default | Effect |
+| -------- | ----------------- | ------- | ------ |
+| `PORT`   | number            | `3000`  | HTTP port |
+| `BOL_UI` | `text` \| `widget` | `text`  | `widget` attaches an [MCP Apps](https://modelcontextprotocol.io/docs/extensions/apps) carousel (`ui://bol/product-carousel.html`), one row per recommendation group |
+
+## Connect
+
+```sh
+codex mcp add bol --url http://localhost:3000
+```
+
+For ChatGPT, expose the HTTP server publicly (e.g. `cloudflared tunnel --url http://localhost:3000`) and add the URL under Settings → Apps in developer mode. Run with `BOL_UI=widget` for the carousel.
+
+## Tool
+
+`ask_bol({ question })` — ask in Dutch. Returns `content[0].text` (assistant text, or the group summaries plus follow-up question when Shophulp answers with groups only) and `structuredContent` with `products[]` (`id`, `name`, `group`, `price`, `currency`, `seller`, `rating`, `reviewCount`, `image`, `url`), `groups[]` (`title`, `summary`), `followUp` and `suggestions[]`.

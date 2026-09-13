@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--color-text-primary,#111);background:transparent}
+  h4{margin:10px 4px 2px;font-size:13px;font-weight:600}
+  .row{display:flex;gap:12px;overflow-x:auto;padding:6px 4px;scroll-snap-type:x mandatory}
+  .card{flex:0 0 170px;scroll-snap-align:start;border:1px solid rgba(128,128,128,.3);border-radius:12px;padding:10px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}
+  .card img{width:100%;height:120px;object-fit:contain;background:#fff;border-radius:8px}
+  .name{font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .price{font-weight:700;font-size:15px}
+  .meta{font-size:11px;opacity:.7}
+</style></head><body><div id="root"></div>
+<script>
+const root = document.getElementById("root");
+const post = m => window.parent.postMessage(m, "*");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function render(result) {
+  const sc = result?.structuredContent ?? {};
+  const groups = sc.groups?.length ? sc.groups : [{ title: "" }];
+  root.innerHTML = groups.map(g => {
+    const items = (sc.products ?? []).filter(p => !g.title || p.group === g.title);
+    return (g.title ? `<h4>${esc(g.title)}</h4>` : "") + `<div class="row">` + items.map(p => `<a class="card" href="${esc(p.url)}" target="_blank" rel="noopener">
+      ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : ""}
+      <div class="name">${esc(p.name)}</div>
+      <div class="price">€ ${Number(p.price).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</div>
+      <div class="meta">${esc(p.seller)}${p.rating ? ` · ★ ${p.rating} (${p.reviewCount})` : ""}</div>
+    </a>`).join("") + `</div>`;
+  }).join("") || `<div class="meta">Geen producten</div>`;
+  post({ jsonrpc: "2.0", method: "ui/notifications/size-changed", params: { height: document.documentElement.scrollHeight } });
+}
+// MCP Apps bridge (ChatGPT, Claude, any MCP Apps host)
+window.addEventListener("message", e => {
+  const m = e.data; if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id === 1 && m.result) post({ jsonrpc: "2.0", method: "ui/notifications/initialized" });
+  if (m.method === "ui/notifications/tool-result") render(m.params);
+});
+post({ jsonrpc: "2.0", id: 1, method: "ui/initialize", params: { protocolVersion: "2026-01-26",
+  appInfo: { name: "bol-carousel", version: "0.1.0" }, appCapabilities: { availableDisplayModes: ["inline"] } } });
+// ChatGPT compatibility alias
+const legacy = () => window.openai?.toolOutput && render({ structuredContent: window.openai.toolOutput });
+legacy(); window.addEventListener("openai:set_globals", legacy);
+</script></body></html>

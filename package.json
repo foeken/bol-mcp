@@ -1,0 +1,14 @@
+{
+  "name": "bol-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for bol.com's Shophulp AI shopping assistant",
+  "type": "module",
+  "bin": { "bol-mcp": "./index.mjs" },
+  "files": ["index.mjs", "widget.html"],
+  "scripts": { "start": "node index.mjs", "check": "node index.mjs --check" },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}
