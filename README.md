@@ -43,4 +43,4 @@ For ChatGPT, expose the HTTP server publicly (e.g. `cloudflared tunnel --url htt
 
 ## Tool
 
-`ask_bol({ question })` — ask in Dutch. Returns `content[0].text` (assistant text, or the group summaries plus follow-up question when Shophulp answers with groups only) and `structuredContent` with `products[]` (`id`, `name`, `group`, `price`, `currency`, `seller`, `rating`, `reviewCount`, `image`, `url`), `groups[]` (`title`, `summary`), `followUp` and `suggestions[]`.
+`ask_bol({ question })` — any language; Shophulp answers in the language of the question, product names stay Dutch. Returns `content[0].text` (assistant text, or the group summaries plus follow-up question when Shophulp answers with groups only) and `structuredContent` with `products[]` (`id`, `name`, `group`, `price`, `currency`, `seller`, `rating`, `reviewCount`, `image`, `url`), `groups[]` (`title`, `summary`), `followUp` and `suggestions[]`.

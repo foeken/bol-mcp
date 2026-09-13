@@ -9,6 +9,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36";
@@ -52,7 +53,7 @@ export async function askBol(question) {
 export function build() {
   const s = new McpServer({ name: "bol", version: "0.1.0" });
   s.registerTool("ask_bol",
-    { description: "Ask bol.com's Shophulp AI shopping assistant (Dutch marketplace: electronics, books, home, toys, fashion...). Ask in Dutch for best results. Returns grouped product recommendations with price, seller, rating, image and url, plus a follow-up question and suggestion chips.",
+    { description: "Ask bol.com's Shophulp AI shopping assistant (Dutch marketplace: electronics, books, home, toys, fashion...). Answers in the language of the question (product names stay Dutch). Returns grouped product recommendations with price, seller, rating, image and url, plus a follow-up question and suggestion chips.",
       inputSchema: { question: z.string() },
       _meta: UI === "widget" ? { ui: { resourceUri: WIDGET_URI }, "openai/outputTemplate": WIDGET_URI } : undefined },
     async ({ question }) => { const r = await askBol(question);
@@ -64,7 +65,10 @@ export function build() {
 }
 
 const argv = process.argv.slice(2);
-if (argv.includes("--check")) {
+const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
+if (!isMain) {
+  // imported as a library: export only
+} else if (argv.includes("--check")) {
   const r = await askBol("Wat is de goedkoopste Ubiquiti access point?");
   console.assert(r.text.length > 20 && r.products.length > 0 && r.products[0].image, "check failed", r);
   console.log("ok:", r.text.slice(0, 160).replace(/\n/g, " "), "| products:", r.products.length, "| groups:", r.groups.length, "| ui:", UI);
