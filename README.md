@@ -2,6 +2,10 @@
 
 MCP server that exposes bol.com's "Shophulp" AI shopping assistant as one tool, `ask_bol`. Sibling of [mediamarkt-mcp](https://github.com/foeken/mediamarkt-mcp).
 
+![ask_bol in ChatGPT: grouped product carousel followed by the assistant's answer](docs/chatgpt-carousel.png)
+
+*ChatGPT calling `ask_bol` with `BOL_UI=widget`: one MCP Apps carousel row per Shophulp recommendation group, the model works from the text and structured data.*
+
 ## How it works
 
 bol's Shophulp page POSTs an OpenAI-style streaming request to `https://www.bol.com/streaming/api/v1/chat/completions` (model `gemini-3.5-flash`, `stream: true`, `user` = a chat/thread UUID). No login or cookies are needed; a browser User-Agent and `Accept: text/event-stream` suffice. The SSE stream carries normal `chat.completion.chunk` deltas plus `t800.tool_outputs` chunks with grouped product recommendations (title, summary, products with price, seller, rating, image, url), a follow-up question and suggestion chips. This server flattens that into `text` + `structuredContent`.
