@@ -7,13 +7,17 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36";
 const UI = process.env.BOL_UI === "widget" ? "widget" : "text";
+const HOST = process.env.BOL_MCP_HOST || "127.0.0.1";
+const PORT = Number(process.env.BOL_MCP_PORT || process.env.PORT || "3000");
+const BEARER_TOKEN = process.env.BOL_MCP_TOKEN;
+const PUBLIC_URL = process.env.BOL_MCP_PUBLIC_URL || `http://${HOST}:${PORT}/mcp`;
 const WIDGET_URI = "ui://bol/product-carousel.html";
 const WIDGET_MIME = "text/html;profile=mcp-app";
 
@@ -64,6 +68,18 @@ export function build() {
   return s;
 }
 
+function authorized(req) {
+  if (!BEARER_TOKEN) return false;
+  const expected = Buffer.from(`Bearer ${BEARER_TOKEN}`);
+  const supplied = Buffer.from(req.headers.authorization || "");
+  return expected.length === supplied.length && timingSafeEqual(expected, supplied);
+}
+
+function writeJson(res, status, body, headers = {}) {
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers });
+  res.end(JSON.stringify(body));
+}
+
 const argv = process.argv.slice(2);
 const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
 if (!isMain) {
@@ -75,9 +91,35 @@ if (!isMain) {
 } else if (argv.includes("--stdio")) {
   await build().connect(new StdioServerTransport());
 } else {
-  const port = Number(process.env.PORT) || 3000;
+  if (!BEARER_TOKEN || BEARER_TOKEN.length < 24) throw new Error("BOL_MCP_TOKEN is required and must contain at least 24 characters");
+  if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error(`Invalid BOL_MCP_PORT: ${process.env.BOL_MCP_PORT}`);
   createServer(async (req, res) => {
-    const t = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined }); // stateless
-    await build().connect(t); await t.handleRequest(req, res);
-  }).listen(port, () => console.error(`bol-mcp (${UI}) on http://localhost:${port}`));
+    const url = new URL(req.url || "/", `http://${req.headers.host || `${HOST}:${PORT}`}`);
+    if (url.pathname === "/health") {
+      writeJson(res, 200, { ok: true, service: "bol-mcp" });
+      return;
+    }
+    if (url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+      writeJson(res, 200, { resource: PUBLIC_URL, bearer_methods_supported: ["header"] });
+      return;
+    }
+    if (url.pathname !== "/mcp") {
+      writeJson(res, 404, { error: "not_found" });
+      return;
+    }
+    if (!authorized(req)) {
+      writeJson(res, 401, { jsonrpc: "2.0", error: { code: -32001, message: "Authentication required" }, id: null }, {
+        "www-authenticate": `Bearer resource_metadata="${new URL("./.well-known/oauth-protected-resource/mcp", PUBLIC_URL)}"`,
+      });
+      return;
+    }
+    try {
+      const t = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined }); // stateless
+      await build().connect(t); await t.handleRequest(req, res);
+    } catch (error) {
+      if (!res.headersSent) writeJson(res, 500, { error: "internal_error" });
+      else res.end();
+      console.error(`bol-mcp request error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }).listen(PORT, HOST, () => console.error(`bol-mcp (${UI}) on http://${HOST}:${PORT}`));
 }
