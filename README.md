@@ -22,11 +22,13 @@ npm run check   # live smoke test against bol.com
 ## Run
 
 ```sh
-node index.mjs                # http://localhost:3000 (Streamable HTTP, stateless)
-PORT=3001 node index.mjs
-BOL_UI=widget node index.mjs  # also serve the grouped product carousel (MCP Apps)
+node index.mjs                 # text mode (default)
+BOL_UI=widget node index.mjs   # widget mode (MCP Apps carousel)
+PORT=3001 node index.mjs       # use another HTTP port
 node index.mjs --stdio        # stdio transport instead
 ```
+
+Widget mode is opt-in because its UI domain must be configured for the deployment. For a remote host, replace the `ui.domain` value in `index.mjs` with that host's reachable HTTPS origin, for example `https://mcp.example.com` (origin only, without `/mcp`). This is separate from `BOL_MCP_PUBLIC_URL`, which is the MCP endpoint and includes `/mcp`. Then set `BOL_UI=widget`; otherwise leave it unset for text mode.
 
 | Variable | Values            | Default | Effect |
 | -------- | ----------------- | ------- | ------ |

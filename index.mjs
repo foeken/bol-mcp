@@ -18,7 +18,7 @@ const HOST = process.env.BOL_MCP_HOST || "127.0.0.1";
 const PORT = Number(process.env.BOL_MCP_PORT || process.env.PORT || "3000");
 const BEARER_TOKEN = process.env.BOL_MCP_TOKEN;
 const PUBLIC_URL = process.env.BOL_MCP_PUBLIC_URL || `http://${HOST}:${PORT}/mcp`;
-const WIDGET_URI = "ui://bol/product-carousel.html";
+const WIDGET_URI = "ui://bol/product-carousel/v2.html";
 const WIDGET_MIME = "text/html;profile=mcp-app";
 
 // ponytail: single-turn; the API is OpenAI-chat-shaped, so pass prior messages[] if follow-ups are ever needed.
@@ -61,10 +61,11 @@ export function build() {
       inputSchema: { question: z.string() },
       _meta: UI === "widget" ? { ui: { resourceUri: WIDGET_URI }, "openai/outputTemplate": WIDGET_URI } : undefined },
     async ({ question }) => { const r = await askBol(question);
-      return { content: [{ type: "text", text: r.text }], structuredContent: r }; });
+      const products = r.products.map(p => `- ${p.name}${p.price == null ? "" : ` — € ${p.price}`}${p.seller ? ` — ${p.seller}` : ""}`).join("\n");
+      return { content: [{ type: "text", text: [r.text, products && `Products:\n${products}`].filter(Boolean).join("\n\n") }], structuredContent: r }; });
   if (UI === "widget") s.registerResource("product-carousel", WIDGET_URI, { mimeType: WIDGET_MIME }, async () => ({
     contents: [{ uri: WIDGET_URI, mimeType: WIDGET_MIME, text: readFileSync(new URL("./widget.html", import.meta.url), "utf8"),
-      _meta: { ui: { prefersBorder: false, domain: "https://bol-mcp.taila4148b.ts.net", csp: { resourceDomains: ["https://media.s-bol.com"] } } } }] }));
+      _meta: { ui: { prefersBorder: false, domain: "https://donut.taila4148b.ts.net", csp: { resourceDomains: ["https://media.s-bol.com"] } } } }] }));
   return s;
 }
 
