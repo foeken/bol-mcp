@@ -28,7 +28,7 @@ PORT=3001 node index.mjs       # use another HTTP port
 node index.mjs --stdio        # stdio transport instead
 ```
 
-Widget mode is opt-in because its UI domain must be configured for the deployment. For a remote host, replace the `ui.domain` value in `index.mjs` with that host's reachable HTTPS origin, for example `https://mcp.example.com` (origin only, without `/mcp`). This is separate from `BOL_MCP_PUBLIC_URL`, which is the MCP endpoint and includes `/mcp`. Then set `BOL_UI=widget`; otherwise leave it unset for text mode.
+Widget mode is opt-in because its UI domain must be configured for the deployment. For a remote host, set `BOL_MCP_WIDGET_DOMAIN` to that host's reachable HTTPS origin, for example `https://mcp.example.com` (origin only, without `/mcp`). This is separate from `BOL_MCP_PUBLIC_URL`, which is the MCP endpoint and includes `/mcp`. Then set `BOL_UI=widget`; otherwise leave it unset for text mode.
 
 | Variable | Values            | Default | Effect |
 | -------- | ----------------- | ------- | ------ |

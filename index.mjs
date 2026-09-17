@@ -18,6 +18,7 @@ const HOST = process.env.BOL_MCP_HOST || "127.0.0.1";
 const PORT = Number(process.env.BOL_MCP_PORT || process.env.PORT || "3000");
 const BEARER_TOKEN = process.env.BOL_MCP_TOKEN;
 const PUBLIC_URL = process.env.BOL_MCP_PUBLIC_URL || `http://${HOST}:${PORT}/mcp`;
+const WIDGET_DOMAIN = process.env.BOL_MCP_WIDGET_DOMAIN;
 const WIDGET_URI = "ui://bol/product-carousel/v2.html";
 const WIDGET_MIME = "text/html;profile=mcp-app";
 
@@ -65,7 +66,7 @@ export function build() {
       return { content: [{ type: "text", text: [r.text, products && `Products:\n${products}`].filter(Boolean).join("\n\n") }], structuredContent: r }; });
   if (UI === "widget") s.registerResource("product-carousel", WIDGET_URI, { mimeType: WIDGET_MIME }, async () => ({
     contents: [{ uri: WIDGET_URI, mimeType: WIDGET_MIME, text: readFileSync(new URL("./widget.html", import.meta.url), "utf8"),
-      _meta: { ui: { prefersBorder: false, domain: "https://donut.taila4148b.ts.net", csp: { resourceDomains: ["https://media.s-bol.com"] } } } }] }));
+      _meta: { ui: { prefersBorder: false, ...(WIDGET_DOMAIN ? { domain: WIDGET_DOMAIN } : {}), csp: { resourceDomains: ["https://media.s-bol.com"] } } } }] }));
   return s;
 }
 
